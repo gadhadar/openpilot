@@ -41,6 +41,10 @@ class CarSpecificEvents:
     if self.CP.carName in ('body', 'mock'):
       events = Events()
 
+    #GCR-BYD Specific Events
+    elif self.CP.carName == 'byd':
+      events = self.create_common_events(CS.out, CS_prev)
+
     elif self.CP.carName == 'subaru':
       events = self.create_common_events(CS.out, CS_prev)
 
