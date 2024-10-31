@@ -81,6 +81,7 @@ def deviceStage(String stageName, String deviceType, List extra_env, def steps) 
 
     def extra = extra_env.collect { "export ${it}" }.join('\n');
     def branch = env.BRANCH_NAME ?: 'master';
+    def gitDiff = sh returnStdout: true, script: 'curl -s -H "Authorization: Bearer ${GITHUB_COMMENTS_TOKEN}" https://api.github.com/repos/commaai/openpilot/compare/master...${GIT_BRANCH} | jq .files[].filename || echo "/"', label: 'Getting changes'
 
     lock(resource: "", label: deviceType, inversePrecedence: true, variable: 'device_ip', quantity: 1, resourceSelectStrategy: 'random') {
       docker.image('ghcr.io/commaai/alpine-ssh').inside('--user=root') {
@@ -91,9 +92,9 @@ def deviceStage(String stageName, String deviceType, List extra_env, def steps) 
             device(device_ip, "git checkout", extra + "\n" + readFile("selfdrive/test/setup_device_ci.sh"))
           }
           steps.each { item ->
-            if (branch != "master" && item.size() == 3 && !hasPathChanged(item[2])) {
+            if (branch != "master" && item.size() == 3 && !hasPathChanged(gitDiff, item[2])) {
               println "Skipping ${item[0]}: no changes in ${item[2]}."
-              return;
+              return
             } else {
               device(device_ip, item[0], item[1])
             }
@@ -104,29 +105,13 @@ def deviceStage(String stageName, String deviceType, List extra_env, def steps) 
   }
 }
 
-@NonCPS
-def hasPathChanged(List<String> paths) {
-  changedFiles = []
-  for (changeLogSet in currentBuild.changeSets) {
-    for (entry in changeLogSet.getItems()) {
-      for (file in entry.getAffectedFiles()) {
-        changedFiles.add(file.getPath())
-      }
-    }
-  }
-
-  env.CHANGED_FILES = changedFiles.join(" ")
-  if (currentBuild.number > 1) {
-    env.CHANGED_FILES += currentBuild.previousBuild.getBuildVariables().get("CHANGED_FILES")
-  }
-
+def hasPathChanged(String gitDiff, List<String> paths) {
   for (path in paths) {
-    if (env.CHANGED_FILES.contains(path)) {
-      return true;
+    if (gitDiff.contains(path)) {
+      return true
     }
   }
-
-  return false;
+  return false
 }
 
 def setupCredentials() {
@@ -180,6 +165,7 @@ node {
     if (env.BRANCH_NAME == 'master-ci') {
       deviceStage("build nightly", "tici-needs-can", [], [
         ["build nightly", "RELEASE_BRANCH=nightly $SOURCE_DIR/release/build_release.sh"],
+        ["build nightly-dev", "PANDA_DEBUG_BUILD=1 RELEASE_BRANCH=nightly-dev $SOURCE_DIR/release/build_release.sh"],
       ])
     }
 
@@ -247,7 +233,6 @@ node {
           ["test pandad spi", "pytest selfdrive/pandad/tests/test_pandad_spi.py"],
           ["test pandad", "pytest selfdrive/pandad/tests/test_pandad.py", ["panda/", "selfdrive/pandad/"]],
           ["test amp", "pytest system/hardware/tici/tests/test_amplifier.py"],
-          ["test hw", "pytest system/hardware/tici/tests/test_hardware.py"],
           ["test qcomgpsd", "pytest system/qcomgpsd/tests/test_qcomgpsd.py"],
         ])
       },

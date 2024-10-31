@@ -38,7 +38,7 @@ PROCS = {
   # Baseline CPU usage by process
   "selfdrive.controls.controlsd": 16.0,
   "selfdrive.selfdrived.selfdrived": 16.0,
-  "selfdrive.car.card": 30.0,
+  "selfdrive.car.card": 26.0,
   "./loggerd": 14.0,
   "./encoderd": 17.0,
   "./camerad": 14.5,
@@ -53,7 +53,7 @@ PROCS = {
   "selfdrive.locationd.calibrationd": 2.0,
   "selfdrive.locationd.torqued": 5.0,
   "selfdrive.locationd.locationd": 25.0,
-  "selfdrive.ui.soundd": 3.38,
+  "selfdrive.ui.soundd": 3.0,
   "selfdrive.monitoring.dmonitoringd": 4.0,
   "./proclogd": 1.54,
   "system.logmessaged": 0.2,
